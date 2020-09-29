@@ -1,0 +1,3 @@
+include ':connection'
+include ':app'
+rootProject.name = "IMConn"
