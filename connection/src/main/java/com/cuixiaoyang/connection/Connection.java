@@ -5,9 +5,11 @@ import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import com.cuixiaoyang.connection.exception.NoListenerException;
 import com.cuixiaoyang.connection.msg.ImageMsg;
 import com.cuixiaoyang.connection.msg.Msg;
 import com.cuixiaoyang.connection.msg.ReplyMsg;
@@ -38,24 +40,34 @@ public class Connection {
     private Handler handler = new Handler() {
         @Override
         public void handleMessage(@NonNull Message msg) {
-            switch (msg.what) {
-                case Constant.MESSAGE_TEXT:
-                    onMsgListener.onReceiveMsg(Constant.MESSAGE_TEXT, new TextMsg((String) msg.obj));
-                    break;
-                case Constant.MESSAGE_IMAGE:
-                    onMsgListener.onReceiveMsg(Constant.MESSAGE_IMAGE, new ImageMsg((Bitmap) msg.obj));
-                    break;
-                case Constant.MESSAGE_REPLY:
-                    onMsgListener.onReceiveMsg(Constant.MESSAGE_REPLY,new ReplyMsg(msg.arg1, (String) msg.obj));
-                    break;
-//                case Constant.BROADCAST_ONLINE:
-//                    onMsgListener.onReceiveMsg(Constant.BROADCAST_ONLINE,new TextMsg((String) msg.obj));
-//                    break;
-//                case Constant.BROADCAST_OUTLINE:
-//                    onMsgListener.onReceiveMsg(Constant.BROADCAST_OUTLINE,new TextMsg((String) msg.obj));
-//                    break;
-                default:
-                    break;
+            try {
+                if (onMsgListener == null) {
+                        throw new NoListenerException("请注册监听回调", 0);
+                }
+                switch (msg.what) {
+                    case Constant.MESSAGE_TEXT:
+                        onMsgListener.onReceiveMsg(Constant.MESSAGE_TEXT, new TextMsg((String) msg.obj));
+                        break;
+                    case Constant.MESSAGE_IMAGE:
+                        onMsgListener.onReceiveMsg(Constant.MESSAGE_IMAGE, new ImageMsg((Bitmap) msg.obj));
+                        break;
+                    case Constant.MESSAGE_REPLY:
+                        onMsgListener.onReceiveMsg(Constant.MESSAGE_REPLY, new ReplyMsg(msg.arg1, (String) msg.obj));
+                        break;
+        //                case Constant.BROADCAST_ONLINE:
+        //                    onMsgListener.onReceiveMsg(Constant.BROADCAST_ONLINE,new TextMsg((String) msg.obj));
+        //                    break;
+        //                case Constant.BROADCAST_OUTLINE:
+        //                    onMsgListener.onReceiveMsg(Constant.BROADCAST_OUTLINE,new TextMsg((String) msg.obj));
+        //                    break;
+                    default:
+                        break;
+                }
+
+            } catch (NoListenerException e) {
+//                e.printStackTrace();
+                RuntimeException exception = new RuntimeException(e);
+                throw exception;
             }
         }
     };
@@ -92,7 +104,6 @@ public class Connection {
         new Thread("listener") {
             @Override
             public void run() {
-
 
                 //消息类型
                 byte[] messageType = new byte[1];
