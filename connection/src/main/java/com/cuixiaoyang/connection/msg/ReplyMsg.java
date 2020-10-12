@@ -2,6 +2,8 @@ package com.cuixiaoyang.connection.msg;
 
 import com.cuixiaoyang.connection.Constant;
 
+import java.io.Serializable;
+
 /**
  * @author
  * @date 2020/9/27.
@@ -9,7 +11,9 @@ import com.cuixiaoyang.connection.Constant;
  * email：1227687610@qq.com
  * description：
  */
-public class ReplyMsg extends Msg<String> {
+public class ReplyMsg extends Msg<String> implements Serializable {
+//    private static final long serialVersionUID = 156768L;
+
 
     private int replyCode;
 

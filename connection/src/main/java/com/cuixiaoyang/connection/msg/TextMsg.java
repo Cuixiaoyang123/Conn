@@ -2,6 +2,7 @@ package com.cuixiaoyang.connection.msg;
 
 import com.cuixiaoyang.connection.Constant;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -11,15 +12,15 @@ import java.util.Arrays;
  * email：1227687610@qq.com
  * description：
  */
-public class TextMsg extends Msg<String>{
+public class TextMsg extends Msg<String> implements Serializable {
+
+    private static final long serialVersionUID = 123433L;
+
 
     public TextMsg(String text) {
+        super();
         type = Constant.MESSAGE_TEXT;
         content = text;
-    }
-    public TextMsg(byte[] bytes) {
-        type = Constant.MESSAGE_TEXT;
-        content = Arrays.toString(bytes);
     }
 
     @Override

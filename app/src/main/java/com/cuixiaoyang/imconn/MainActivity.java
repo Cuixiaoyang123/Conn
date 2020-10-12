@@ -53,8 +53,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
     };
+    //10.11.15.223  10.11.15.243
     //  mi "192.168.43.243"  lenovo "192.168.43.168";
-    private String sendToIP = "192.168.43.168";
+    private String sendToIP = "192.168.43.243";
 
 
     @Override
@@ -82,7 +83,9 @@ public class MainActivity extends AppCompatActivity {
                         result2.setText("client:" + msg.getContent());
                         break;
                     case Constant.MESSAGE_IMAGE:
-                        iv_receive.setImageBitmap((Bitmap) msg.getContent());
+                        byte[] content = (byte[]) msg.getContent();
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(content, 0, content.length);
+                        iv_receive.setImageBitmap(bitmap);
                         break;
                     case Constant.MESSAGE_REPLY:
                         result.setText("client:" + msg.getContent());
@@ -107,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
                 //10.11.15.223  10.11.15.242  10.11.15.244
                 //192.168.43.243              192.168.43.168
 //                byte[] messages = inputContent.getBytes("utf-8");
-                Connection.getInstance().sendMessage(sendToIP,inputContent);
+                Connection.getInstance().sendText(sendToIP,inputContent);
 
             }
         });

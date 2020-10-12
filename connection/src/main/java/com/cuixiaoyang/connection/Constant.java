@@ -18,8 +18,11 @@ public class Constant {
     public static final int BROADCAST_ONLINE = 28;
     public static final int BROADCAST_OUTLINE = 29;
 
-    public static final int MESSAGE_CONNECTION = 20;
-    public static final int MESSAGE_DISCONNECTION = 50;
+    public static final int CONNECTION_ACCEPT = 20;
+    public static final int DISCONNECTION_BAD_NETWORK = 40;
+    public static final int DISCONNECTION_BROKEN_PIPE = 41;
+    public static final int DISCONNECTION_OUTLINE = 42;
+    public static final int CONNECTION_REJECT = 50;
 
     public static final int SERVER_PORT = 30000;
 
