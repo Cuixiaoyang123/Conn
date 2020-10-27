@@ -17,10 +17,11 @@ public class ReplyMsg extends Msg<String> implements Serializable {
 
     private int replyCode;
 
-    public ReplyMsg(int replyCode,String text) {
+    public ReplyMsg(int replyCode,String text,long time) {
         type = Constant.MESSAGE_REPLY;
         this.replyCode = replyCode;
         this.content = text;
+        this.time = time;
     }
 
     public int getReplyCode() {

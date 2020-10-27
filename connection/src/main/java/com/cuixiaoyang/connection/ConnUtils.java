@@ -1,9 +1,16 @@
 package com.cuixiaoyang.connection;
 
+import android.content.Context;
+import android.telephony.TelephonyManager;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
+import java.util.stream.Stream;
 
 /**
  * @author
@@ -34,6 +41,25 @@ public class ConnUtils {
         return null;
     }
 
+
+
+    public static byte[] steamToByte(InputStream input) {
+        byte[] b = new byte[1024];
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            int len = 0;
+            while ((len = input.read(b, 0, b.length)) != -1) {
+                baos.write(b, 0, len);
+            }
+            byte[] buffer = baos.toByteArray();
+            return buffer;
+
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+        return b;
+    }
+
     public static byte[] long2Bytes(long num) {
         byte[] byteNum = new byte[8];
         for (int ix = 0; ix < 8; ++ix) {
@@ -51,4 +77,5 @@ public class ConnUtils {
         }
         return num;
     }
+
 }

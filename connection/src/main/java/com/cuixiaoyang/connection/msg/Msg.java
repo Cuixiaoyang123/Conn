@@ -1,5 +1,8 @@
 package com.cuixiaoyang.connection.msg;
 
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+
 import java.io.Serializable;
 
 /**
@@ -9,6 +12,7 @@ import java.io.Serializable;
  * email：1227687610@qq.com
  * description：
  */
+
 public class Msg<T> implements Serializable {
 
     protected int type;
