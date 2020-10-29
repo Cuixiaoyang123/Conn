@@ -54,6 +54,10 @@ public class Utils {
         return null;
     }
 
+    public static String findDeviceId(String fromIp) {
+        return fromIp;
+    }
+
     //保存缩略图
     public static String saveMiniBitmap(Bitmap bm, Context mContext) {
         //指定我们想要存储文件的地址

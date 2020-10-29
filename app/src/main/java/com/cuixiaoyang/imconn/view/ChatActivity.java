@@ -8,7 +8,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -40,23 +39,18 @@ import com.cuixiaoyang.connection.Connection;
 import com.cuixiaoyang.connection.Constant;
 import com.cuixiaoyang.connection.msg.ImageMsg;
 import com.cuixiaoyang.connection.msg.Msg;
-import com.cuixiaoyang.connection.msg.ReplyMsg;
 import com.cuixiaoyang.connection.msg.TextMsg;
-import com.cuixiaoyang.imconn.KeyboardManager;
 import com.cuixiaoyang.imconn.R;
 import com.cuixiaoyang.imconn.Utils;
 import com.cuixiaoyang.imconn.adapter.ChatAdapter;
-import com.cuixiaoyang.imconn.model.bean.MessageInfo;
 import com.cuixiaoyang.imconn.viewModel.ChatViewModel;
+import com.example.appdb.model.entity.Message;
+import com.example.appdb.modelApi.MessageApi;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -72,27 +66,28 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     private EditText input;
     private ImageView iv_receive;
     private Context mContext;
-    private List<MessageInfo> allMsgs = new ArrayList<>();
+    private List<Message> allMsgs = new ArrayList<>();
     private int count = 0;
     //执行线程池 数据库的访问需要在子线程执行
     private ExecutorService mThreadPool = Executors.newSingleThreadExecutor();
 
     //10.11.15.223  10.11.15.243
 //      mi "192.168.43.243"  lenovo "192.168.43.168";
-//    private String deviceId = "10.11.15.223";
-//    private int deviceIdProfile = R.drawable.your;
-//    private int myProfile = R.drawable.my;
-//    private String sendToIP = "10.11.15.223";
+    private final String deviceId = "10.11.15.223";
+    private int deviceIdProfile = R.drawable.your;
+    private int myProfile = R.drawable.my;
+    private String sendToIP = "10.11.15.223";
 
-    private String deviceId = "10.11.15.243";
-    private int deviceIdProfile = R.drawable.my;
-    private int myProfile = R.drawable.your;
-    private String sendToIP = "10.11.15.243";
+//    private final String deviceId = "10.11.15.243";
+//    private int deviceIdProfile = R.drawable.my;
+//    private int myProfile = R.drawable.your;
+//    private String sendToIP = "10.11.15.243";
 
     private ChatAdapter adapter;
     private RecyclerView rv;
     private EditText et_msg;
     private View include_select;
+    private int messageNums = 0;
 
 
     @Override
@@ -103,54 +98,79 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         chatViewModel = ViewModelProviders.of(this).get(ChatViewModel.class);
         chatViewModel.messageList.observe(this, list -> {
             allMsgs.clear();
-             allMsgs.addAll(list);
+            allMsgs.addAll(list);
+            messageNums = list.size();
             adapter.notifyDataSetChanged();
             rv.scrollToPosition(allMsgs.size() - 1);
         });
-        //创建server
-        Connection.getInstance().initServer(new Connection.OnMsgListener() {
+
+        Connection.getInstance().setOnMsgListener(new Connection.OnMsgListener() {
             @Override
             public void onReceiveMsg(int type,String fromIp, Msg msg) {
-                String deviceId = findDeviceId(fromIp);
-                switch (type) {
-                    case Constant.MESSAGE_TEXT:
-                        chatViewModel.insertMsg(makeMsgFromReceText(deviceId,msg),deviceId,()->{
-                        });
-                        break;
-                    case Constant.MESSAGE_IMAGE:
-                        byte[] content = (byte[]) msg.getContent();
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(content, 0, content.length);
-                        String path = Utils.saveBitmap(bitmap, mContext);
-                        String miniPath = Utils.saveMiniBitmap(bitmap, mContext);
-                        chatViewModel.insertMsg(makeMsgFromReceImg(deviceId,path,miniPath,msg),deviceId,()->{
+                String devicesId = Utils.findDeviceId(fromIp);
+                if (devicesId.equals(deviceId)) {
+                    if (type != Constant.MESSAGE_REPLY) {
+                        messageNums++;
+                    }
+                    //通过chatViewModel更新adapter中的数据
+                    new Handler().postDelayed(() -> chatViewModel.updateMsgWithSomebody(deviceId, messageNums, 0), 500);
 
-                        });
-                        break;
-                    case Constant.MESSAGE_REPLY:
-                        long time = msg.getTime();
-                        int replyCode = ((ReplyMsg) msg).getReplyCode();
-                        if (replyCode == 20) {
-                            chatViewModel.changeSentStatue(time, 1, deviceId, () -> {
-                            });
-                        }else {
-                            chatViewModel.changeSentStatue(time, 0, deviceId, () -> {
-                            });
-                        }
-                        break;
-                    default:
-                        break;
                 }
+//                if (type == Constant.MESSAGE_REPLY) {
+//                    long time = msg.getTime();
+//                        int replyCode = ((ReplyMsg) msg).getReplyCode();
+//                        if (replyCode == 20) {
+//                            //改变数据库消息状态
+////                            chatViewModel.changeSentStatue(time, 1, deviceId, () -> {
+////                            });
+//                        }else {
+//                            //改变数据库消息状态
+////                            chatViewModel.changeSentStatue(time, 0, deviceId, () -> {
+////                            });
+//                        }
+//                }
+//                switch (type) {
+//                    case Constant.MESSAGE_TEXT:
+//                        //插入数据库
+////                        chatViewModel.insertMsg(makeMsgFromReceText(deviceId,msg),deviceId,()->{
+////                        });
+//                        break;
+//                    case Constant.MESSAGE_IMAGE:
+//                        byte[] content = (byte[]) msg.getContent();
+//                        Bitmap bitmap = BitmapFactory.decodeByteArray(content, 0, content.length);
+//                        String path = Utils.saveBitmap(bitmap, mContext);
+//                        String miniPath = Utils.saveMiniBitmap(bitmap, mContext);
+//                        //插入数据库
+////                        chatViewModel.insertMsg(makeMsgFromReceImg(deviceId,path,miniPath,msg),deviceId,()->{
+////
+////                        });
+//                        break;
+//                    case Constant.MESSAGE_REPLY:
+//                        long time = msg.getTime();
+//                        int replyCode = ((ReplyMsg) msg).getReplyCode();
+//                        if (replyCode == 20) {
+//                            //改变数据库消息状态
+////                            chatViewModel.changeSentStatue(time, 1, deviceId, () -> {
+////                            });
+//                        }else {
+//                            //改变数据库消息状态
+////                            chatViewModel.changeSentStatue(time, 0, deviceId, () -> {
+////                            });
+//                        }
+//                        break;
+//                    default:
+//                        break;
+//                }
             }
         });
+
         setContentView(R.layout.activity_wechat_chat);
         initComponents();
-        chatViewModel.getAllMsgWithSomebody(sendToIP);
+        chatViewModel.obtainMoreMsgWithSomebody(deviceId,50,1,(b)->{});
 
     }
 
-    private String findDeviceId(String fromIp) {
-        return fromIp;
-    }
+
 
 
     private String getlocalip() {
@@ -163,48 +183,50 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                 + (ipAddress >> 16 & 0xff) + "." + (ipAddress >> 24 & 0xff));
     }
 
-    private MessageInfo makeMsgFromSendText(String deviceId, Msg msg) {
-        MessageInfo info = new MessageInfo();
-        info.setTime(msg.getTime());
-        info.setText((String) msg.getContent());
-        info.setType(msg.getType());
-        info.setDeviceId(deviceId);
-        info.setSendOrReceive(0);
-        info.setReadStatus(1);
+    private Message makeMsgFromSendText(String deviceId, Msg msg) {
+        Message info = new Message();
+        info.setMTime(msg.getTime());
+        info.setMText((String) msg.getContent());
+        info.setMMessageType(msg.getType());
+        info.setMFriendID(deviceId);
+        info.setMSendOrReceive(0);
+        info.setMSendStatus(-1);
+        info.setMReadStatus(1);
         return info;
     }
-    private MessageInfo makeMsgFromSendImg(String deviceId, String path,String miniPath,Msg msg) {
-        MessageInfo info = new MessageInfo();
-        info.setTime(msg.getTime());
-        info.setMinImgPath(miniPath);
-        info.setImgPath(path);
-        info.setType(msg.getType());
-        info.setDeviceId(deviceId);
-        info.setSendOrReceive(0);
-        info.setReadStatus(1);
-        return info;
-    }
-
-    private MessageInfo makeMsgFromReceText(String deviceId, Msg msg){
-        MessageInfo info = new MessageInfo();
-        info.setTime(msg.getTime());
-        info.setText((String) msg.getContent());
-        info.setType(msg.getType());
-        info.setDeviceId(deviceId);
-        info.setSendOrReceive(1);
-        info.setReadStatus(0);
+    private Message makeMsgFromSendImg(String deviceId, String path,String miniPath,Msg msg) {
+        Message info = new Message();
+        info.setMTime(msg.getTime());
+        info.setMPictureThumbnail(miniPath);
+        info.setMPicture(path);
+        info.setMMessageType(msg.getType());
+        info.setMFriendID(deviceId);
+        info.setMSendOrReceive(0);
+        info.setMSendStatus(-1);
+        info.setMReadStatus(1);
         return info;
     }
 
-    private MessageInfo makeMsgFromReceImg(String deviceId, String path,String miniPath, Msg msg){
-        MessageInfo info = new MessageInfo();
-        info.setTime(msg.getTime());
-        info.setType(msg.getType());
-        info.setImgPath(path);
-        info.setMinImgPath(miniPath);
-        info.setDeviceId(deviceId);
-        info.setSendOrReceive(1);
-        info.setReadStatus(0);
+    private Message makeMsgFromReceText(String deviceId, Msg msg){
+        Message info = new Message();
+        info.setMTime(msg.getTime());
+        info.setMText((String) msg.getContent());
+        info.setMMessageType(msg.getType());
+        info.setMFriendID(deviceId);
+        info.setMSendOrReceive(1);
+        info.setMReadStatus(0);
+        return info;
+    }
+
+    private Message makeMsgFromReceImg(String deviceId, String path,String miniPath, Msg msg){
+        Message info = new Message();
+        info.setMTime(msg.getTime());
+        info.setMMessageType(msg.getType());
+        info.setMPicture(path);
+        info.setMPictureThumbnail(miniPath);
+        info.setMFriendID(deviceId);
+        info.setMSendOrReceive(1);
+        info.setMReadStatus(0);
         return info;
     }
 
@@ -223,7 +245,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         Button btn_send = findViewById(R.id.activity_wechat_chat_btn_send);
         rv = findViewById(R.id.activity_wechat_chat_rv);
         rv.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ChatAdapter(this, allMsgs,myProfile,deviceIdProfile);
+        adapter = new ChatAdapter(this,chatViewModel, allMsgs,myProfile,deviceIdProfile);
         rv.setAdapter(adapter);
 
         iv_back.setOnClickListener((v) -> finish());
@@ -284,11 +306,12 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                messageNums += 10;
+                //通过chatViewModel更新adapter中的数据
+                chatViewModel.obtainMoreMsgWithSomebody(deviceId, messageNums, 0,(b)->{
+                    runOnUiThread(()->refreshLayout.setRefreshing(false));
+                });
 
-
-                Toast.makeText(mContext, "refreshing ...", Toast.LENGTH_SHORT).show();
-
-                refreshLayout.setRefreshing(false);
             }
         });
 
@@ -331,13 +354,14 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
         byte[] messages = baos.toByteArray();
         ImageMsg imageMsg = new ImageMsg(messages);
-        Connection.getInstance().sendMessage(sendToIP,imageMsg);
-        String deviceId = findDeviceId(sendToIP);
+
+        String deviceId = Utils.findDeviceId(sendToIP);
         String path = Utils.saveBitmap(bitmap, mContext);
         String miniPath = Utils.saveMiniBitmap(bitmap, mContext);
-        MessageInfo info = makeMsgFromSendImg(deviceId,path,miniPath, imageMsg);
-        chatViewModel.insertMsg(info, deviceId, ()->{
-        });
+        Message info = makeMsgFromSendImg(deviceId,path,miniPath, imageMsg);
+        chatViewModel.insertMsg(info,deviceId,messageNums, (b)->{});
+
+        Connection.getInstance().sendMessage(sendToIP,imageMsg);
     }
 
     private void sendImg(Drawable drawable) {
@@ -346,14 +370,15 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
         byte[] messages = baos.toByteArray();
-        ImageMsg imageMsg = new ImageMsg(messages);
-        Connection.getInstance().sendMessage(sendToIP,imageMsg);
-        String deviceId = findDeviceId(sendToIP);
+        String deviceId = Utils.findDeviceId(sendToIP);
         String path = Utils.saveBitmap(bitmap, mContext);
         String miniPath = Utils.saveMiniBitmap(bitmap, mContext);
-        MessageInfo info = makeMsgFromSendImg(deviceId,path,miniPath, imageMsg);
-        chatViewModel.insertMsg(info, deviceId, ()->{
-        });
+        ImageMsg imageMsg = new ImageMsg(messages);
+        Message info = makeMsgFromSendImg(deviceId,path,miniPath, imageMsg);
+        chatViewModel.insertMsg(info,deviceId,messageNums,(b)->{});
+        Connection.getInstance().sendMessage(sendToIP,imageMsg);
+
+
     }
 
     /**
@@ -365,11 +390,11 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
      */
     private void sendText(String text) {
         TextMsg textMsg = new TextMsg(text);
-        Connection.getInstance().sendMessage(sendToIP,textMsg);
-        String deviceId = findDeviceId(sendToIP);
-        MessageInfo info = makeMsgFromSendText(deviceId, textMsg);
-        chatViewModel.insertMsg(info, deviceId, ()->{
+        Message info = makeMsgFromSendText(deviceId, textMsg);
+        chatViewModel.insertMsg(info, deviceId, messageNums, (b)->{
         });
+        Connection.getInstance().sendMessage(sendToIP,textMsg);
+        String deviceId = Utils.findDeviceId(sendToIP);
     }
 
     private void showKeyboard() {

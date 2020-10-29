@@ -24,13 +24,13 @@ public interface MsgDao {
     @Query("SELECT * FROM messageInfo")
     List<MessageInfo> getAllMsgs();
 
-    @Query("SELECT * FROM messageInfo WHERE deviceId=:deviceId order by time ASC")
+    @Query("SELECT * FROM messageInfo WHERE mFriendID =:deviceId order by mTime ASC")
     List<MessageInfo> getMsgsWithSomebody(String deviceId);
 
     @Insert
     void insert(MessageInfo msg);
 
-    @Query("UPDATE messageInfo SET sendStatus= :sign WHERE time = :time")
+    @Query("UPDATE messageInfo SET mSendStatus= :sign WHERE mTime = :time")
     void setSentStatus(long time,int sign);
 
     @Update

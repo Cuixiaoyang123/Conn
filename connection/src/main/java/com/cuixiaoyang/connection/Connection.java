@@ -32,6 +32,10 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author
@@ -47,21 +51,23 @@ public class Connection {
         @Override
         public void handleMessage(@NonNull Message msg) {
             try {
-                if (onMsgListener == null) {
+                if (callbackList == null) {
                         throw new NoListenerException("请注册监听回调", 0);
                 }
-                switch (msg.what) {
-                    case Constant.MESSAGE_TEXT:
-                        onMsgListener.onReceiveMsg(Constant.MESSAGE_TEXT,msg.getData().getString("fromIp"), (TextMsg) msg.obj);
-                        break;
-                    case Constant.MESSAGE_IMAGE:
-                        onMsgListener.onReceiveMsg(Constant.MESSAGE_IMAGE,msg.getData().getString("fromIp"), (ImageMsg) msg.obj);
-                        break;
-                    case Constant.MESSAGE_REPLY:
-                        onMsgListener.onReceiveMsg(Constant.MESSAGE_REPLY, msg.getData().getString("fromIp"),(ReplyMsg) msg.obj);
-                        break;
-                    default:
-                        break;
+                for (OnMsgListener onMsgListener: callbackList) {
+                    switch (msg.what) {
+                        case Constant.MESSAGE_TEXT:
+                            onMsgListener.onReceiveMsg(Constant.MESSAGE_TEXT,msg.getData().getString("fromIp"), (TextMsg) msg.obj);
+                            break;
+                        case Constant.MESSAGE_IMAGE:
+                            onMsgListener.onReceiveMsg(Constant.MESSAGE_IMAGE,msg.getData().getString("fromIp"), (ImageMsg) msg.obj);
+                            break;
+                        case Constant.MESSAGE_REPLY:
+                            onMsgListener.onReceiveMsg(Constant.MESSAGE_REPLY, msg.getData().getString("fromIp"),(ReplyMsg) msg.obj);
+                            break;
+                        default:
+                            break;
+                    }
                 }
 
             } catch (NoListenerException e) {
@@ -77,10 +83,11 @@ public class Connection {
     }
 
 
+    private ExecutorService mThreadPool = Executors.newCachedThreadPool();
     private static final String TAG = "Connection";
     private static final String SERVER_STATE = "200";
 
-    public OnMsgListener onMsgListener;
+    public List<OnMsgListener> callbackList = new ArrayList<>();
     private static Connection connection;
 
     public static Connection getInstance() {
@@ -95,9 +102,13 @@ public class Connection {
         return connection;
     }
 
-//    public void setOnMsgListener(onMsgListener listener) {
-//        this.onMsgListener = listener;
-//    }
+    public void setOnMsgListener(OnMsgListener listener) {
+        callbackList.add(listener);
+    }
+
+    public void cancelOnMsgListener(OnMsgListener listener) {
+        callbackList.remove(listener);
+    }
 
     public void addToBlackList(){
         if (!blackListFlag) {
@@ -105,14 +116,12 @@ public class Connection {
         }
     }
 
-    public void initServer(OnMsgListener onMsgListener) {
-        this.onMsgListener = onMsgListener;
+    public void initServer() {
 
         new Thread("listener") {
 
-            private ObjectInputStream ois = null;
             private Socket socket = null;
-            private ObjectOutputStream oos = null;
+
 
             @Override
             public void run() {
@@ -120,71 +129,90 @@ public class Connection {
                 try {
                     ServerSocket serverSocket = new ServerSocket(Constant.SERVER_PORT);
                     while (true) {
-                        Message msg = new Message();
-
-
-                        //读取信息
-                        StringBuilder result = new StringBuilder();
-                        String buffer;
 
                         socket = serverSocket.accept();
-                        String fromIp = socket.getInetAddress().getHostAddress();
-                        Bundle bundle = new Bundle();
-                        bundle.putString("fromIp", fromIp);
-                        msg.setData(bundle);
+                        mThreadPool.execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                Socket copySocket = socket;
+                                ObjectInputStream ois = null;
+                                ObjectOutputStream oos = null;
+                                Message msg = new Message();
+                                String fromIp = copySocket.getInetAddress().getHostAddress();
+                                Bundle bundle = new Bundle();
+                                bundle.putString("fromIp", fromIp);
+                                msg.setData(bundle);
 
-                        //获取 客户端信息
-                        ois = new ObjectInputStream(
-                                                    new BufferedInputStream(
-                                                        socket.getInputStream()));
-                        Msg msgRec = (Msg) ois.readObject();
+                                try {
+                                    //获取 客户端信息
+                                    ois = new ObjectInputStream(
+                                            new BufferedInputStream(
+                                                    copySocket.getInputStream()));
+                                    Msg msgRec = (Msg) ois.readObject();
 
-                        //向客户端发送 回复消息
-                        oos = new ObjectOutputStream(socket.getOutputStream());
-                        if (blackListFlag) {
-                        }
-                        oos.writeObject(new ReplyMsg(Constant.CONNECTION_ACCEPT,"",msgRec.getTime()));
-                        oos.flush();
-                        socket.shutdownOutput();
+                                    //向客户端发送 回复消息
+                                    oos = new ObjectOutputStream(copySocket.getOutputStream());
+                                    if (blackListFlag) {
+                                    }
+                                    oos.writeObject(new ReplyMsg(Constant.CONNECTION_ACCEPT,"",msgRec.getTime()));
+                                    oos.flush();
+                                    copySocket.shutdownOutput();
 
-                        //根据不同的type 转成不同的Msg对象 并发送的UI线程的handler中
-                        switch ((msgRec.getType())) {
-                            case Constant.MESSAGE_TEXT:
-                                TextMsg textMsg = (TextMsg) msgRec;
-                                msg.what = Constant.MESSAGE_TEXT;//接文本消息
-                                msg.obj = textMsg;
-                                handler.sendMessage(msg);
+                                    //根据不同的type 转成不同的Msg对象 并发送的UI线程的handler中
+                                    switch ((msgRec.getType())) {
+                                        case Constant.MESSAGE_TEXT:
+                                            TextMsg textMsg = (TextMsg) msgRec;
+                                            msg.what = Constant.MESSAGE_TEXT;//接文本消息
+                                            msg.obj = textMsg;
+                                            handler.sendMessage(msg);
 
-                                ois.close();
-                                oos.close();
-                                socket.close();
-                                break;
-                            case Constant.MESSAGE_IMAGE:
-                                ImageMsg imageMsg = (ImageMsg) msgRec;
-                                msg.what = Constant.MESSAGE_IMAGE;//接Image消息
-                                msg.obj = imageMsg;
-                                handler.sendMessage(msg);
-                                ois.close();
-                                oos.close();
-                                socket.close();
-                                break;
-                            case Constant.MESSAGE_VOICE:
-                                break;
-                            default:
-                                break;
-                        }
+                                            ois.close();
+                                            oos.close();
+                                            copySocket.close();
+                                            break;
+                                        case Constant.MESSAGE_IMAGE:
+                                            ImageMsg imageMsg = (ImageMsg) msgRec;
+                                            msg.what = Constant.MESSAGE_IMAGE;//接Image消息
+                                            msg.obj = imageMsg;
+                                            handler.sendMessage(msg);
+                                            ois.close();
+                                            oos.close();
+                                            copySocket.close();
+                                            break;
+                                        case Constant.MESSAGE_VOICE:
+                                            break;
+                                        default:
+                                            break;
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                } catch (ClassNotFoundException e) {
+                                    e.printStackTrace();
+                                }finally {
+                                    try {
+                                        if (ois == null) {
+                                            ois.close();
+                                        }
+                                        if (oos == null) {
+                                            oos.close();
+                                        }
+                                        if (copySocket == null) {
+                                            copySocket.close();
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+
+                            }
+                        });
 
                     }
-                } catch (IOException | ClassNotFoundException e1) {
+                } catch (IOException e1) {
                     e1.printStackTrace();
                 }finally {
                     try {
-                        if (ois == null) {
-                            ois.close();
-                        }
-                        if (oos == null) {
-                            oos.close();
-                        }
                         if (socket == null) {
                             socket.close();
                         }

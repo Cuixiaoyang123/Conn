@@ -1,5 +1,6 @@
 package com.cuixiaoyang.imconn.model.bean;
 
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -14,103 +15,98 @@ import androidx.room.PrimaryKey;
 public class MessageInfo {
 
     @PrimaryKey(autoGenerate = true)
-    private int msgId;
-    private String fromDeviceId;
-    private String deviceId;
-    private int sendOrReceive;
-    private int type;
-    private long time;
-    private String text;
-    private String minImgPath;
-    private String ImgPath;
-    private int readStatus;
-    private int sendStatus = -1;
 
-    public int getMsgId() {
-        return msgId;
+    private int mID;                              //信息ID
+    @NonNull
+    private String mFriendID;                    //好友设备ID
+    private int mSendOrReceive;                  //发送或接收标志位，接收1，发送0
+    private long mTime;                        //消息时间
+    private int mMessageType;                    //消息类型，文本1，图片0
+    private String mText;                        //文本内容
+    private String mPicture;                     //原图路径
+    private String mPictureThumbnail;            //缩略图路径
+    private int mReadStatus;                     //已读或未读标志位，已读1，未读0
+    private int mSendStatus = -1;                //发送成功或失败标志位，成功1，失败0
+
+    public int getMID() {
+        return mID;
     }
 
-    public void setMsgId(int msgId) {
-        this.msgId = msgId;
+    public void setMID(int mID) {
+        this.mID = mID;
     }
 
-    public String getFromDeviceId() {
-        return fromDeviceId;
+
+    public String getMFriendID() {
+        return mFriendID;
     }
 
-    public void setFromDeviceId(String fromDeviceId) {
-        this.fromDeviceId = fromDeviceId;
+    public void setMFriendID(String mFriendID) {
+        this.mFriendID = mFriendID;
     }
 
-    public String getDeviceId() {
-        return deviceId;
+    public int getMSendOrReceive() {
+        return mSendOrReceive;
     }
 
-    public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
+    public void setMSendOrReceive(int mSendOrReceive) {
+        this.mSendOrReceive = mSendOrReceive;
     }
 
-    public int getSendOrReceive() {
-        return sendOrReceive;
+    public long getMTime() {
+        return mTime;
     }
 
-    public void setSendOrReceive(int sendOrReceive) {
-        this.sendOrReceive = sendOrReceive;
+    public void setMTime(long mTime) {
+        this.mTime = mTime;
     }
 
-    public int getType() {
-        return type;
+    public int getMMessageType() {
+        return mMessageType;
     }
 
-    public void setType(int type) {
-        this.type = type;
+    public void setMMessageType(int mMessageType) {
+        this.mMessageType = mMessageType;
     }
 
-    public long getTime() {
-        return time;
+    public String getMText() {
+        return mText;
     }
 
-    public void setTime(long time) {
-        this.time = time;
+    public void setMText(String mText) {
+        this.mText = mText;
     }
 
-    public String getText() {
-        return text;
+    public String getMPicture() {
+        return mPicture;
     }
 
-    public void setText(String text) {
-        this.text = text;
+    public void setMPicture(String mPicture) {
+        this.mPicture = mPicture;
     }
 
-    public String getMinImgPath() {
-        return minImgPath;
+    public String getMPictureThumbnail() {
+        return mPictureThumbnail;
     }
 
-    public void setMinImgPath(String minImgPath) {
-        this.minImgPath = minImgPath;
+    public void setMPictureThumbnail(String mPictureThumbnail) {
+        this.mPictureThumbnail = mPictureThumbnail;
     }
 
-    public String getImgPath() {
-        return ImgPath;
+    public int getMReadStatus() {
+        return mReadStatus;
     }
 
-    public void setImgPath(String imgPath) {
-        ImgPath = imgPath;
+    public void setMReadStatus(int mReadStatus) {
+        this.mReadStatus = mReadStatus;
     }
 
-    public int getReadStatus() {
-        return readStatus;
+    public int getMSendStatus() {
+        return mSendStatus;
     }
 
-    public void setReadStatus(int readStatus) {
-        this.readStatus = readStatus;
+    public void setMSendStatus(int mSendStatus) {
+        this.mSendStatus = mSendStatus;
     }
 
-    public int getSendStatus() {
-        return sendStatus;
-    }
-
-    public void setSendStatus(int sendStatus) {
-        this.sendStatus = sendStatus;
-    }
 }

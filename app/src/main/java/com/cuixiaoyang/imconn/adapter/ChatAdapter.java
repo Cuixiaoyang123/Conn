@@ -25,8 +25,9 @@ import com.cuixiaoyang.connection.Constant;
 import com.cuixiaoyang.connection.msg.TextMsg;
 import com.cuixiaoyang.imconn.R;
 import com.cuixiaoyang.imconn.Utils;
-import com.cuixiaoyang.imconn.model.bean.MessageInfo;
 import com.cuixiaoyang.imconn.view.PreviewImgActivity;
+import com.cuixiaoyang.imconn.viewModel.ChatViewModel;
+import com.example.appdb.model.entity.Message;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,12 +39,14 @@ import java.util.List;
 
 public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private List<MessageInfo> listData;
+    private List<Message> listData;
+    private ChatViewModel chatViewModel;
     private int myProfile, yourProfile;
     private Context context;
 
-    public ChatAdapter(Context context, List<MessageInfo> listData, @DrawableRes int myProfile,@DrawableRes int yourProfile) {
+    public ChatAdapter(Context context, ChatViewModel chatViewModel, List<Message> listData, @DrawableRes int myProfile, @DrawableRes int yourProfile) {
         this.context = context;
+        this.chatViewModel = chatViewModel;
         this.listData = listData;
         this.myProfile = myProfile;
         this.yourProfile = yourProfile;
@@ -51,7 +54,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemViewType(int position) {
-        return listData.get(position).getType();
+        return listData.get(position).getMMessageType();
     }
 
     @Override
@@ -72,18 +75,25 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         Log.i("ChatAdapter", "onBindViewHolder: ");
-        MessageInfo messageInfo = listData.get(position);
-        MessageInfo preMsgData = null;
+        Message messageInfo = listData.get(position);
+        Message preMsgData = null;
         if (holder instanceof TextMsgViewHolder) {
             TextMsgViewHolder textMsgViewHolder = (TextMsgViewHolder) holder;
             if (position >= 1)
                 preMsgData = listData.get(position - 1);
-            switch (messageInfo.getSendOrReceive()) {
+            switch (messageInfo.getMSendOrReceive()) {
                 case 1://本机接收消息
                     initTimeStamp(textMsgViewHolder, messageInfo, preMsgData);
                     textMsgViewHolder.senderLayout.setVisibility(View.GONE);
                     textMsgViewHolder.receiverLayout.setVisibility(View.VISIBLE);
-                    textMsgViewHolder.receiveMsg.setText(messageInfo.getText());
+                    textMsgViewHolder.receiveMsg.setText(messageInfo.getMText());
+                    textMsgViewHolder.sendMsg.setOnLongClickListener((view)->{
+                        chatViewModel.deleteMsg(listData.get(position).getMID(),(b) -> {});
+                        listData.remove(position);
+                        notifyDataSetChanged();
+                        return false;
+                            }
+                    );
                     textMsgViewHolder.receiver_profile.setImageDrawable(context.getDrawable(yourProfile));
                     break;
 
@@ -92,9 +102,17 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     initTimeStamp(textMsgViewHolder, messageInfo, preMsgData);
                     textMsgViewHolder.senderLayout.setVisibility(View.VISIBLE);
                     textMsgViewHolder.receiverLayout.setVisibility(View.GONE);
-                    textMsgViewHolder.sendMsg.setText(messageInfo.getText());
+                    textMsgViewHolder.sendMsg.setText(messageInfo.getMText());
+                    textMsgViewHolder.sendMsg.setOnLongClickListener((view)->{
+                        chatViewModel.deleteMsg(listData.get(position).getMID(),(b) -> {});
+                        listData.remove(position);
+                        notifyDataSetChanged();
+                        return false;
+                            }
+                    );
                     textMsgViewHolder.send_profile.setImageDrawable(context.getDrawable(myProfile));
-                    switch (messageInfo.getSendStatus()) {
+
+                    switch (messageInfo.getMSendStatus()) {
                         case 0://发送消息失败
                             textMsgViewHolder.progressBar_send.hide();
                             textMsgViewHolder.send_defeat.setVisibility(View.VISIBLE);
@@ -104,6 +122,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             textMsgViewHolder.send_defeat.setVisibility(View.INVISIBLE);
                             break;
                         default:
+                            textMsgViewHolder.progressBar_send.show();
+                            textMsgViewHolder.send_defeat.setVisibility(View.INVISIBLE);
                             break;
                     }
 //                    textMsgViewHolder.send_profile.setImageResource(messageInfo.getProfile_res());
@@ -113,18 +133,26 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             ImgMsgViewHolder imgMsgViewHolder = (ImgMsgViewHolder) holder;
             if (position >= 1)
                 preMsgData = listData.get(position - 1);
-            switch (messageInfo.getSendOrReceive()) {
+            switch (messageInfo.getMSendOrReceive()) {
                 case 1://本机接收图片
                     initTimeStamp(imgMsgViewHolder, messageInfo, preMsgData);
                     imgMsgViewHolder.senderLayout.setVisibility(View.GONE);
                     imgMsgViewHolder.receiverLayout.setVisibility(View.VISIBLE);
-                    String minImgPath = messageInfo.getMinImgPath();
+                    String minImgPath = messageInfo.getMPictureThumbnail();
                     Glide.with(context).load(new File(minImgPath)).into(imgMsgViewHolder.receiveImg);
 //                    if (messageInfo.getSendStatus() != -1) imgMsgViewHolder.progressBar_receive.hide();
 //                    if (messageInfo.getSendStatus() == 0)
                     imgMsgViewHolder.receiver_profile.setImageDrawable(context.getDrawable(yourProfile));
                     imgMsgViewHolder.receiveImg.setOnClickListener(v ->
-                            context.startActivity(new Intent(context, PreviewImgActivity.class).putExtra("url", messageInfo.getImgPath()))
+                            context.startActivity(new Intent(context, PreviewImgActivity.class).putExtra("url", messageInfo.getMPictureThumbnail()))
+                    );
+                    imgMsgViewHolder.receiveImg.setOnLongClickListener(view ->{
+                        chatViewModel.deleteMsg(listData.get(position).getMID(), (b) -> {});
+                        listData.remove(position);
+                        notifyDataSetChanged();
+                        return false;
+                        }
+
                     );
                     break;
 
@@ -133,17 +161,24 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     initTimeStamp(imgMsgViewHolder, messageInfo, preMsgData);
                     imgMsgViewHolder.senderLayout.setVisibility(View.VISIBLE);
                     imgMsgViewHolder.receiverLayout.setVisibility(View.GONE);
-                    String minImgPath1 = messageInfo.getMinImgPath();
+                    String minImgPath1 = messageInfo.getMPictureThumbnail();
                     Glide.with(context).load(new File(minImgPath1)).into(imgMsgViewHolder.sendImg);
-                    if (messageInfo.getSendStatus() != -1) imgMsgViewHolder.progressBar_send.hide();
-                    if (messageInfo.getSendStatus() == 0) imgMsgViewHolder.send_defeat.setVisibility(View.VISIBLE);
+                    if (messageInfo.getMSendStatus() != -1) imgMsgViewHolder.progressBar_send.hide();
+                    if (messageInfo.getMSendStatus() == 0) imgMsgViewHolder.send_defeat.setVisibility(View.VISIBLE);
                     imgMsgViewHolder.sendImg.setOnClickListener(view -> {
-                        context.startActivity(new Intent(context, PreviewImgActivity.class).putExtra("url", messageInfo.getImgPath()));
+                        context.startActivity(new Intent(context, PreviewImgActivity.class).putExtra("url", messageInfo.getMPictureThumbnail()));
                     });
+                    imgMsgViewHolder.sendImg.setOnLongClickListener(view ->{
+                        chatViewModel.deleteMsg(listData.get(position).getMID(), (b) -> {});
+                        listData.remove(position);
+                        notifyDataSetChanged();
+                        return false;
+                        }
+                    );
 
 //                    imgMsgViewHolder.sendImg.setImageURI(Uri.parse(messageInfo.getMinImgPath()));//setImageBitmap(BitmapFactory.decodeFile(messageInfo.getMinImgPath()))
                     imgMsgViewHolder.send_profile.setImageDrawable(context.getDrawable(myProfile));
-                    switch (messageInfo.getSendStatus()) {
+                    switch (messageInfo.getMSendStatus()) {
                         case 0://发送消息失败
                             imgMsgViewHolder.progressBar_send.hide();
                             imgMsgViewHolder.send_defeat.setVisibility(View.VISIBLE);
@@ -164,12 +199,12 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
 
-    private void initTimeStamp(TextMsgViewHolder holder, MessageInfo currentMsgData, MessageInfo preMsgData) {
+    private void initTimeStamp(TextMsgViewHolder holder, Message currentMsgData, Message preMsgData) {
         String showTime;
         if (preMsgData == null) {
-            showTime = Utils.calculateShowTime(Utils.getCurrentMillisTime(), currentMsgData.getTime());
+            showTime = Utils.calculateShowTime(Utils.getCurrentMillisTime(), currentMsgData.getMTime());
         } else {
-            showTime = Utils.calculateShowTime(currentMsgData.getTime(), preMsgData.getTime());
+            showTime = Utils.calculateShowTime(currentMsgData.getMTime(), preMsgData.getMTime());
         }
         if (showTime != null) {
             holder.timeStamp.setVisibility(View.VISIBLE);
@@ -180,12 +215,12 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     }
 
-    private void initTimeStamp(ImgMsgViewHolder holder, MessageInfo currentMsgData, MessageInfo preMsgData) {
+    private void initTimeStamp(ImgMsgViewHolder holder, Message currentMsgData, Message preMsgData) {
         String showTime;
         if (preMsgData == null) {
-            showTime = Utils.calculateShowTime(Utils.getCurrentMillisTime(), currentMsgData.getTime());
+            showTime = Utils.calculateShowTime(Utils.getCurrentMillisTime(), currentMsgData.getMTime());
         } else {
-            showTime = Utils.calculateShowTime(currentMsgData.getTime(), preMsgData.getTime());
+            showTime = Utils.calculateShowTime(currentMsgData.getMTime(), preMsgData.getMTime());
         }
         if (showTime != null) {
             holder.timeStamp.setVisibility(View.VISIBLE);
